@@ -5,7 +5,7 @@ import facade.*;
 import java.util.Locale;
 import java.util.Scanner;
 
-/**вф
+/**вфdad
  * Консольный UI:
  *  - цифровое главное меню
  *  - voice mode: те же пункты, но ввод словами
