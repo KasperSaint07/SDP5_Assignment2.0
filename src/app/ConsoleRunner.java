@@ -2,13 +2,16 @@ package app;
 
 import devices.*;
 import facade.*;
+
 import java.util.Locale;
 import java.util.Scanner;
 
-/**вфdad
+/**
  * Консольный UI:
- *  - цифровое главное меню
- *  - voice mode: те же пункты, но ввод словами
+ * 1) Scenes (Facade)  -> Party / Night / Leave
+ * 2) Settings         -> Light / MusicSystem / Camera / Thermostat
+ * 3) Features         -> Voice Mode / Energy Profile / Remote Control
+ * 0) Exit
  */
 public class ConsoleRunner {
     private final SmartHomeContext ctx;
@@ -25,10 +28,8 @@ public class ConsoleRunner {
             int pick = readInt("Choose: ");
             switch (pick) {
                 case 1 -> handleScenes();
-                case 2 -> handleDevices();
+                case 2 -> handleSettings();
                 case 3 -> handleFeatures();
-                case 4 -> handleSettings();
-                case 5 -> runVoiceMode();
                 case 0 -> { System.out.println("Bye!"); return; }
                 default -> System.out.println("Unknown option.");
             }
@@ -38,10 +39,8 @@ public class ConsoleRunner {
     private void printMainMenu() {
         System.out.println("\n=== SMART HOME ===");
         System.out.println("1) Scenes (Facade)          -> Party / Night / Leave");
-        System.out.println("2) Devices control          -> Light / Music / Camera / Thermostat");
-        System.out.println("3) Features (Decorators)    -> Toggle Voice/Energy/Remote per device");
-        System.out.println("4) Settings                 -> Light: dim/bright/off; Music: volume; Thermostat: modes");
-        System.out.println("5) Voice Control mode       -> same menu, but choose by typing words");
+        System.out.println("2) Settings                 -> Light / MusicSystem / Camera / Thermostat");
+        System.out.println("3) Features (Decorators)    -> Voice Mode / Energy Profile / Remote Control");
         System.out.println("0) Exit");
     }
 
@@ -49,10 +48,15 @@ public class ConsoleRunner {
     private HomeAutomationFacade buildFacade() {
         StartPartyModeFacade party = new StartPartyModeFacade(
                 ctx.getLightDecorated(), ctx.getLightRaw(),
-                ctx.getMusicDecorated(), ctx.getMusicRaw()
+                ctx.getMusicDecorated(), ctx.getMusicRaw(),
+                ctx.getThermostat()
         );
-        NightModeFacade night = new NightModeFacade(ctx.getLightRaw(), ctx.getThermostat(), ctx.getCamera());
-        LeaveHomeFacade leave = new LeaveHomeFacade(ctx.getLightRaw(), ctx.getMusicRaw(), ctx.getCamera(), ctx.getThermostat());
+        NightModeFacade night = new NightModeFacade(
+                ctx.getLightRaw(), ctx.getThermostat(), ctx.getCamera(), ctx.getMusicRaw()
+        );
+        LeaveHomeFacade leave = new LeaveHomeFacade(
+                ctx.getLightRaw(), ctx.getMusicRaw(), ctx.getCamera(), ctx.getThermostat()
+        );
         return new HomeAutomationFacade(party, night, leave);
     }
 
@@ -73,161 +77,127 @@ public class ConsoleRunner {
         }
     }
 
-    // ======== DEVICES CONTROL ========
-    private void handleDevices() {
-        System.out.println("\n=== DEVICES ===");
+    // ======== SETTINGS (главное подменю) ========
+    private void handleSettings() {
+        System.out.println("\n=== SETTINGS ===");
         System.out.println("1) Light");
-        System.out.println("2) Music");
+        System.out.println("2) MusicSystem");
         System.out.println("3) Camera");
         System.out.println("4) Thermostat");
         System.out.println("0) Back");
-        int pick = readInt("Choose: ");
-        switch (pick) {
-            case 1 -> deviceLight();
-            case 2 -> deviceMusic();
-            case 3 -> deviceCamera();
-            case 4 -> deviceThermostat();
+        int p = readInt("Choose: ");
+        switch (p) {
+            case 1 -> settingsLight();
+            case 2 -> settingsMusic();
+            case 3 -> settingsCamera();
+            case 4 -> settingsThermostat();
             case 0 -> {}
             default -> System.out.println("Unknown option.");
         }
     }
 
-    private void deviceLight() {
-        System.out.println("\n[LIGHT]");
-        System.out.println("1) Bright");
-        System.out.println("2) Dim");
-        System.out.println("3) Off");
-        System.out.println("4) Operate (with decorators)");
+    // ----- Settings: Light -----
+    private void settingsLight() {
+        System.out.println("\n[LIGHT SETTINGS]");
+        System.out.println("1) Current condition");
+        System.out.println("2) Choose power (level 0..10)");
+        System.out.println("3) Bright (100%)");
+        System.out.println("4) Dim (30%)");
+        System.out.println("5) OFF");
+        System.out.println("6) Preview (apply features)");
         System.out.println("0) Back");
         int p = readInt("Choose: ");
         Light l = ctx.getLightRaw();
         switch (p) {
-            case 1 -> l.bright();
-            case 2 -> l.dim();
-            case 3 -> l.off();
-            case 4 -> ctx.getLightDecorated().operate();
+            case 1 -> System.out.println(l.status());
+            case 2 -> l.setLevel(readInt("Level 0..10 = "));
+            case 3 -> l.bright();
+            case 4 -> l.dim();
+            case 5 -> l.off();
+            case 6 -> ctx.getLightDecorated().operate(); // применить фичи и показать статус
             case 0 -> {}
             default -> System.out.println("Unknown option.");
         }
     }
 
-    private void deviceMusic() {
-        System.out.println("\n[MUSIC]");
-        System.out.println("1) Play");
-        System.out.println("2) Stop");
-        System.out.println("3) Set volume (1..10)");
-        System.out.println("4) Operate (with decorators)");
+    // ----- Settings: Music -----
+    private void settingsMusic() {
+        System.out.println("\n[MUSIC SETTINGS]");
+        System.out.println("1) Current condition");
+        System.out.println("2) Choose power (volume 0..10)");
+        System.out.println("3) OFF (stop)");
+        System.out.println("4) Preview (apply features)");
         System.out.println("0) Back");
         int p = readInt("Choose: ");
         MusicSystem m = ctx.getMusicRaw();
         switch (p) {
-            case 1 -> m.play();
-            case 2 -> m.stop();
-            case 3 -> {
-                int v = readInt("Volume = ");
-                m.setVolume(v);
-            }
+            case 1 -> System.out.println(m.status());
+            case 2 -> m.setVolume(readInt("Volume 0..10 = "));
+            case 3 -> m.stop();
             case 4 -> ctx.getMusicDecorated().operate();
             case 0 -> {}
             default -> System.out.println("Unknown option.");
         }
     }
 
-    private void deviceCamera() {
-        System.out.println("\n[CAMERA]");
-        System.out.println("1) Enable");
-        System.out.println("2) Disable");
+    // ----- Settings: Camera -----
+    private void settingsCamera() {
+        System.out.println("\n[CAMERA SETTINGS]");
+        System.out.println("1) Current condition");
+        System.out.println("2) On");
+        System.out.println("3) Off");
         System.out.println("0) Back");
         int p = readInt("Choose: ");
         SecurityCamera c = ctx.getCamera();
         switch (p) {
-            case 1 -> c.enable();
-            case 2 -> c.disable();
+            case 1 -> System.out.println(c.status());
+            case 2 -> c.enable();
+            case 3 -> c.disable();
             case 0 -> {}
             default -> System.out.println("Unknown option.");
         }
     }
 
-    private void deviceThermostat() {
-        System.out.println("\n[THERMOSTAT]");
-        System.out.println("1) Comfort");
-        System.out.println("2) Eco");
-        System.out.println("3) Night");
-        System.out.println("4) Away");
-        System.out.println("5) Set temperature (15..28)");
+    // ----- Settings: Thermostat -----
+    private void settingsThermostat() {
+        System.out.println("\n[THERMOSTAT SETTINGS]");
+        System.out.println("1) Current condition");
+        System.out.println("2) Choose temperature (16..30)");
+        System.out.println("3) Choose humidity (30..70)");
+        System.out.println("4) OFF");
         System.out.println("0) Back");
         int p = readInt("Choose: ");
         Thermostat t = ctx.getThermostat();
         switch (p) {
-            case 1 -> t.setComfort();
-            case 2 -> t.setEco();
-            case 3 -> t.setNight();
-            case 4 -> t.setAway();
-            case 5 -> {
-                int c = readInt("Target °C = ");
-                // прямого API нет — покажем как меняется режимом ближе всего
-                if (c >= 15 && c <= 28) {
-                    // простая имитация: подбираем ближайший режим
-                    if (c >= 21) t.setComfort();
-                    else if (c >= 19) t.setEco();
-                    else if (c >= 18) t.setNight();
-                    else t.setAway();
-                    System.out.println("(Note) Direct set not supported; mapped to closest mode.");
-                } else {
-                    System.out.println("Invalid range (15..28).");
-                }
-            }
+            case 1 -> System.out.println(t.status());
+            case 2 -> t.setTemperature(readInt("Temp 16..30 = "));
+            case 3 -> t.setHumidity(readInt("Humidity 30..70 = "));
+            case 4 -> t.setOff();
             case 0 -> {}
             default -> System.out.println("Unknown option.");
         }
     }
 
-    // ======== FEATURES (DECORATORS) ========
+    // ======== FEATURES (Decorators) ========
     private void handleFeatures() {
         while (true) {
-            System.out.println("\n=== FEATURES (Decorators) ===");
-            System.out.println("Light:  Voice=" + onOff(ctx.isLightVoice()) + ", Energy=" + onOff(ctx.isLightEnergy()));
-            System.out.println("Music:  Remote=" + onOff(ctx.isMusicRemote()) + ", Energy=" + onOff(ctx.isMusicEnergy()));
-            System.out.println("1) Toggle Light Voice");
-            System.out.println("2) Toggle Light Energy");
-            System.out.println("3) Toggle Music Remote");
-            System.out.println("4) Toggle Music Energy");
+            System.out.println("\n=== FEATURES ===");
+            System.out.println("1) Voice Mode");
+            System.out.println("2) Energy Profile (current: "
+                    + SmartHomeContext.energyProfileToText(ctx.getEnergyProfile()) + ")");
+            System.out.println("3) Remote Control (cloud="
+                    + (ctx.isCloudConnected() ? "CONNECTED" : "DISCONNECTED")
+                    + ", LightRemote=" + (ctx.isLightRemote() ? "ON" : "OFF")
+                    + ", MusicRemote=" + (ctx.isMusicRemote() ? "ON" : "OFF") + ")");
             System.out.println("0) Back");
             int p = readInt("Choose: ");
             switch (p) {
-                case 1 -> ctx.toggleLightVoice();
-                case 2 -> ctx.toggleLightEnergy();
-                case 3 -> ctx.toggleMusicRemote();
-                case 4 -> ctx.toggleMusicEnergy();
+                case 1 -> runVoiceMode();
+                case 2 -> energyProfileMenu();
+                case 3 -> remoteControlMenu();
                 case 0 -> { return; }
                 default -> System.out.println("Unknown option.");
             }
-        }
-    }
-
-    private String onOff(boolean b) { return b ? "ON" : "OFF"; }
-
-    // ======== SETTINGS (shortcuts) ========
-    private void handleSettings() {
-        System.out.println("\n=== SETTINGS ===");
-        System.out.println("1) Light -> Bright");
-        System.out.println("2) Light -> Dim");
-        System.out.println("3) Light -> Off");
-        System.out.println("4) Music -> Volume (1..10)");
-        System.out.println("5) Thermostat -> Night");
-        System.out.println("0) Back");
-        int p = readInt("Choose: ");
-        switch (p) {
-            case 1 -> ctx.getLightRaw().bright();
-            case 2 -> ctx.getLightRaw().dim();
-            case 3 -> ctx.getLightRaw().off();
-            case 4 -> {
-                int v = readInt("Volume = ");
-                ctx.getMusicRaw().setVolume(v);
-            }
-            case 5 -> ctx.getThermostat().setNight();
-            case 0 -> {}
-            default -> System.out.println("Unknown option.");
         }
     }
 
@@ -246,7 +216,6 @@ public class ConsoleRunner {
             if (lc.equals("exit")) break;
             if (lc.equals("help")) { printVoiceHelp(); continue; }
 
-            // главные разделы (регистронезависимо + допускаем варианты)
             if (equalsAny(lc, "scenes", "scene")) { voiceScenes(); continue; }
             if (equalsAny(lc, "devices", "device")) { voiceDevices(); continue; }
             if (equalsAny(lc, "features", "feature")) { voiceFeatures(); continue; }
@@ -300,29 +269,40 @@ public class ConsoleRunner {
     }
 
     private void voiceLight() {
-        System.out.println("light: bright | dim | off | operate | back");
+        System.out.println("light: bright | dim | off | operate | level <0..10> | back");
         while (true) {
             System.out.print("light> ");
-            String s = in.nextLine().trim().toLowerCase(Locale.ROOT);
-            if (s.equals("back") || s.equals("exit")) break;
-            switch (s) {
+            String s = in.nextLine().trim();
+            String lc = s.toLowerCase(Locale.ROOT);
+            if (lc.equals("back") || lc.equals("exit")) break;
+
+            if (lc.startsWith("level")) {
+                String[] p = s.split("\\s+");
+                if (p.length >= 2) {
+                    try { ctx.getLightRaw().setLevel(Integer.parseInt(p[1])); }
+                    catch (NumberFormatException e) { System.out.println("Invalid number."); }
+                } else System.out.println("Usage: level 7");
+                continue;
+            }
+            switch (lc) {
                 case "bright" -> ctx.getLightRaw().bright();
-                case "dim" -> ctx.getLightRaw().dim();
-                case "off" -> ctx.getLightRaw().off();
-                case "operate" -> ctx.getLightDecorated().operate();
-                case "help" -> System.out.println("bright | dim | off | operate | back");
+                case "dim"    -> ctx.getLightRaw().dim();
+                case "off"    -> ctx.getLightRaw().off();
+                case "operate"-> ctx.getLightDecorated().operate();
+                case "help"   -> System.out.println("bright | dim | off | operate | level N | back");
                 default -> System.out.println("Unknown.");
             }
         }
     }
 
     private void voiceMusic() {
-        System.out.println("music: play | stop | volume <1..10> | operate | back");
+        System.out.println("music: play | stop | volume <0..10> | operate | back");
         while (true) {
             System.out.print("music> ");
             String s = in.nextLine().trim();
             String lc = s.toLowerCase(Locale.ROOT);
             if (lc.equals("back") || lc.equals("exit")) break;
+
             if (lc.startsWith("volume")) {
                 String[] parts = s.split("\\s+");
                 if (parts.length >= 2) {
@@ -332,10 +312,10 @@ public class ConsoleRunner {
                 continue;
             }
             switch (lc) {
-                case "play" -> ctx.getMusicRaw().play();
-                case "stop" -> ctx.getMusicRaw().stop();
+                case "play"    -> ctx.getMusicRaw().play();
+                case "stop"    -> ctx.getMusicRaw().stop();
                 case "operate" -> ctx.getMusicDecorated().operate();
-                case "help" -> System.out.println("play | stop | volume <1..10> | operate | back");
+                case "help"    -> System.out.println("play | stop | volume N | operate | back");
                 default -> System.out.println("Unknown.");
             }
         }
@@ -349,92 +329,87 @@ public class ConsoleRunner {
             if (s.equals("back") || s.equals("exit")) break;
             switch (s) {
                 case "enable" -> ctx.getCamera().enable();
-                case "disable" -> ctx.getCamera().disable();
-                case "help" -> System.out.println("enable | disable | back");
+                case "disable"-> ctx.getCamera().disable();
+                case "help"   -> System.out.println("enable | disable | back");
                 default -> System.out.println("Unknown.");
             }
         }
     }
 
     private void voiceThermostat() {
-        System.out.println("thermostat: comfort | eco | night | away | temp <15..28> | back");
+        System.out.println("thermostat: comfort | eco | night | away | off | temp <16..30> | humidity <30..70> | back");
         while (true) {
             System.out.print("thermostat> ");
             String s = in.nextLine().trim();
             String lc = s.toLowerCase(Locale.ROOT);
             if (lc.equals("back") || lc.equals("exit")) break;
+
             if (lc.startsWith("temp")) {
-                String[] parts = s.split("\\s+");
-                if (parts.length >= 2) {
-                    try {
-                        int c = Integer.parseInt(parts[1]);
-                        if (c >= 15 && c <= 28) {
-                            if (c >= 21) ctx.getThermostat().setComfort();
-                            else if (c >= 19) ctx.getThermostat().setEco();
-                            else if (c >= 18) ctx.getThermostat().setNight();
-                            else ctx.getThermostat().setAway();
-                            System.out.println("(Note) Direct set not supported; mapped to closest mode.");
-                        } else System.out.println("Invalid range (15..28).");
-                    } catch (NumberFormatException e) { System.out.println("Invalid number."); }
+                String[] p = s.split("\\s+");
+                if (p.length >= 2) {
+                    try { ctx.getThermostat().setTemperature(Integer.parseInt(p[1])); }
+                    catch (NumberFormatException e) { System.out.println("Invalid number."); }
                 } else System.out.println("Usage: temp 21");
                 continue;
             }
+            if (lc.startsWith("humidity")) {
+                String[] p = s.split("\\s+");
+                if (p.length >= 2) {
+                    try { ctx.getThermostat().setHumidity(Integer.parseInt(p[1])); }
+                    catch (NumberFormatException e) { System.out.println("Invalid number."); }
+                } else System.out.println("Usage: humidity 45");
+                continue;
+            }
+
             switch (lc) {
                 case "comfort" -> ctx.getThermostat().setComfort();
-                case "eco" -> ctx.getThermostat().setEco();
-                case "night" -> ctx.getThermostat().setNight();
-                case "away" -> ctx.getThermostat().setAway();
-                case "help" -> System.out.println("comfort | eco | night | away | temp <15..28> | back");
+                case "eco"     -> ctx.getThermostat().setEco();
+                case "night"   -> ctx.getThermostat().setNight();
+                case "away"    -> ctx.getThermostat().setAway();
+                case "off"     -> ctx.getThermostat().setOff();
+                case "help"    -> System.out.println("comfort | eco | night | away | off | temp N | humidity N | back");
                 default -> System.out.println("Unknown.");
             }
         }
     }
 
-    // ======== UTIL ========
-    private int readInt(String prompt) {
-        while (true) {
-            System.out.print(prompt);
-            String s = in.nextLine();
-            try { return Integer.parseInt(s.trim()); }
-            catch (Exception e) { System.out.println("Invalid number."); }
-        }
-    }
-    // ======== VOICE: FEATURES ========
-    // ======== VOICE: FEATURES ========
-    // ======== VOICE: FEATURES ========
+    // ======== VOICE: FEATURES (профиль энергии + тумблеры) ========
     private void voiceFeatures() {
         System.out.println("[voice] features mode. Type:");
         System.out.println("  status");
-        System.out.println("  toggle light voice");
-        System.out.println("  toggle light energy");
-        System.out.println("  toggle music remote");
-        System.out.println("  toggle music energy");
+        System.out.println("  energy off | energy mild | energy aggressive");
+        System.out.println("  toggle light remote | toggle music remote | toggle light voice");
         System.out.println("  back");
         while (true) {
             System.out.print("features> ");
             String s = in.nextLine().trim().toLowerCase(java.util.Locale.ROOT);
             switch (s) {
                 case "status" -> {
-                    System.out.println("Light:  Voice=" + onOff(ctx.isLightVoice()) + ", Energy=" + onOff(ctx.isLightEnergy()));
-                    System.out.println("Music:  Remote=" + onOff(ctx.isMusicRemote()) + ", Energy=" + onOff(ctx.isMusicEnergy()));
+                    System.out.println("Energy: " + SmartHomeContext.energyProfileToText(ctx.getEnergyProfile()));
+                    System.out.println("Light:  Voice=" + (ctx.isLightVoice() ? "ON" : "OFF")
+                            + ", Remote=" + (ctx.isLightRemote() ? "ON" : "OFF"));
+                    System.out.println("Music:  Remote=" + (ctx.isMusicRemote() ? "ON" : "OFF"));
                 }
-                case "toggle light voice"  -> ctx.toggleLightVoice();
-                case "toggle light energy" -> ctx.toggleLightEnergy();
-                case "toggle music remote" -> ctx.toggleMusicRemote();
-                case "toggle music energy" -> ctx.toggleMusicEnergy();
-                case "help" -> System.out.println("status | toggle light voice | toggle light energy | toggle music remote | toggle music energy | back");
+                case "energy off"        -> ctx.setEnergyProfile(0);
+                case "energy mild"       -> ctx.setEnergyProfile(1);
+                case "energy aggressive" -> ctx.setEnergyProfile(2);
+                case "toggle light remote"  -> { ctx.toggleLightRemote();  System.out.println("Light Remote  -> " + (ctx.isLightRemote() ? "ON" : "OFF")); }
+                case "toggle music remote"  -> { ctx.toggleMusicRemote();  System.out.println("Music Remote  -> " + (ctx.isMusicRemote() ? "ON" : "OFF")); }
+                case "toggle light voice"   -> { ctx.toggleLightVoice();   System.out.println("Light Voice   -> " + (ctx.isLightVoice() ? "ON" : "OFF")); }
+                case "help" -> System.out.println("status | energy off|mild|aggressive | toggle light remote | toggle music remote | toggle light voice | back");
                 case "back", "exit" -> { return; }
                 default -> System.out.println("Unknown. Type 'help'.");
             }
         }
     }
 
-    // ======== VOICE: SETTINGS ========
+    // ======== VOICE: SETTINGS (шорткаты словами) ========
     private void voiceSettings() {
         System.out.println("[voice] settings mode. Examples:");
-        System.out.println("  light bright | light dim | light off");
+        System.out.println("  light level 7 | light bright | light dim | light off");
         System.out.println("  music play | music stop | music volume 7");
-        System.out.println("  thermostat comfort|eco|night|away | thermostat temp 21");
+        System.out.println("  thermostat comfort|eco|night|away|off | thermostat temp 21 | thermostat humidity 45");
+        System.out.println("  camera enable|disable");
         System.out.println("  back");
         while (true) {
             System.out.print("settings> ");
@@ -444,23 +419,27 @@ public class ConsoleRunner {
 
             if (lc.equals("back") || lc.equals("exit")) return;
             if (lc.equals("help")) {
-                System.out.println("light bright|dim|off | music play|stop|volume N | thermostat comfort|eco|night|away|temp N | back");
+                System.out.println("light level N|bright|dim|off | music play|stop|volume N | thermostat comfort|eco|night|away|off|temp N|humidity N | camera enable|disable | back");
                 continue;
             }
 
             if (lc.startsWith("light")) {
-                switch (lc) {
-                    case "light bright" -> ctx.getLightRaw().bright();
-                    case "light dim"    -> ctx.getLightRaw().dim();
-                    case "light off"    -> ctx.getLightRaw().off();
-                    default -> System.out.println("Unknown light command.");
+                String[] p = line.split("\\s+");
+                if (lc.equals("light bright")) { ctx.getLightRaw().bright(); continue; }
+                if (lc.equals("light dim"))    { ctx.getLightRaw().dim();    continue; }
+                if (lc.equals("light off"))    { ctx.getLightRaw().off();    continue; }
+                if (p.length == 3 && p[1].equalsIgnoreCase("level")) {
+                    try { ctx.getLightRaw().setLevel(Integer.parseInt(p[2])); }
+                    catch (NumberFormatException e) { System.out.println("Invalid number."); }
+                    continue;
                 }
+                System.out.println("Unknown light command.");
                 continue;
             }
 
             if (lc.startsWith("music")) {
-                if (lc.equals("music play")) { ctx.getMusicRaw().play(); continue; }
-                if (lc.equals("music stop")) { ctx.getMusicRaw().stop(); continue; }
+                if (lc.equals("music play"))  { ctx.getMusicRaw().play();  continue; }
+                if (lc.equals("music stop"))  { ctx.getMusicRaw().stop();  continue; }
                 if (lc.startsWith("music volume")) {
                     String[] p = line.split("\\s+");
                     if (p.length >= 3) {
@@ -475,30 +454,34 @@ public class ConsoleRunner {
 
             if (lc.startsWith("thermostat")) {
                 if (lc.equals("thermostat comfort")) { ctx.getThermostat().setComfort(); continue; }
-                if (lc.equals("thermostat eco"))     { ctx.getThermostat().setEco(); continue; }
-                if (lc.equals("thermostat night"))   { ctx.getThermostat().setNight(); continue; }
-                if (lc.equals("thermostat away"))    { ctx.getThermostat().setAway(); continue; }
+                if (lc.equals("thermostat eco"))     { ctx.getThermostat().setEco();     continue; }
+                if (lc.equals("thermostat night"))   { ctx.getThermostat().setNight();   continue; }
+                if (lc.equals("thermostat away"))    { ctx.getThermostat().setAway();    continue; }
+                if (lc.equals("thermostat off"))     { ctx.getThermostat().setOff();     continue; }
                 if (lc.startsWith("thermostat temp")) {
                     String[] p = line.split("\\s+");
                     if (p.length >= 3) {
-                        try {
-                            int c = Integer.parseInt(p[2]);
-                            if (c >= 15 && c <= 28) {
-                                if (c >= 21) ctx.getThermostat().setComfort();
-                                else if (c >= 19) ctx.getThermostat().setEco();
-                                else if (c >= 18) ctx.getThermostat().setNight();
-                                else ctx.getThermostat().setAway();
-                                System.out.println("(Note) Direct set not supported; mapped to closest mode.");
-                            } else System.out.println("Invalid range (15..28).");
-                        } catch (NumberFormatException e) {
-                            System.out.println("Invalid number.");
-                        }
-                    } else {
-                        System.out.println("Usage: thermostat temp 21");
-                    }
+                        try { ctx.getThermostat().setTemperature(Integer.parseInt(p[2])); }
+                        catch (NumberFormatException e) { System.out.println("Invalid number."); }
+                    } else System.out.println("Usage: thermostat temp 21");
+                    continue;
+                }
+                if (lc.startsWith("thermostat humidity")) {
+                    String[] p = line.split("\\s+");
+                    if (p.length >= 3) {
+                        try { ctx.getThermostat().setHumidity(Integer.parseInt(p[2])); }
+                        catch (NumberFormatException e) { System.out.println("Invalid number."); }
+                    } else System.out.println("Usage: thermostat humidity 45");
                     continue;
                 }
                 System.out.println("Unknown thermostat command.");
+                continue;
+            }
+
+            if (lc.startsWith("camera")) {
+                if (lc.equals("camera enable")) { ctx.getCamera().enable();  continue; }
+                if (lc.equals("camera disable")){ ctx.getCamera().disable(); continue; }
+                System.out.println("Unknown camera command.");
                 continue;
             }
 
@@ -506,6 +489,64 @@ public class ConsoleRunner {
         }
     }
 
+    // ======== UTIL ========
+    private int readInt(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String s = in.nextLine();
+            try { return Integer.parseInt(s.trim()); }
+            catch (Exception e) { System.out.println("Invalid number."); }
+        }
+    }
 
+    // ----- Energy Profile submenu -----
+    private void energyProfileMenu() {
+        System.out.println("\n[ENERGY PROFILE]");
+        System.out.println("Current: " + SmartHomeContext.energyProfileToText(ctx.getEnergyProfile()));
+        System.out.println("1) OFF        (no saving)");
+        System.out.println("2) MILD       (Light<=50%, Music<=5)");
+        System.out.println("3) AGGRESSIVE (Light=Dim, Music<=3)");
+        System.out.println("4) Preview energy impact now");
+        System.out.println("0) Back");
+        int p = readInt("Choose: ");
+        switch (p) {
+            case 1 -> ctx.setEnergyProfile(0);
+            case 2 -> ctx.setEnergyProfile(1);
+            case 3 -> ctx.setEnergyProfile(2);
+            case 4 -> { ctx.getLightDecorated().operate(); ctx.getMusicDecorated().operate(); }
+            case 0 -> {}
+            default -> System.out.println("Unknown option.");
+        }
+    }
 
+    private void remoteControlMenu() {
+        System.out.println("\n[REMOTE CONTROL]");
+        System.out.println("Cloud: " + (ctx.isCloudConnected() ? "CONNECTED" : "DISCONNECTED"));
+        System.out.println("Light Remote: " + (ctx.isLightRemote() ? "ON" : "OFF"));
+        System.out.println("Music Remote: " + (ctx.isMusicRemote() ? "ON" : "OFF"));
+        System.out.println("1) Toggle cloud connect/disconnect");
+        System.out.println("2) Toggle Light Remote");
+        System.out.println("3) Toggle Music Remote");
+        System.out.println("4) Quick preview (apply features on both)");
+        System.out.println("0) Back");
+        int p = readInt("Choose: ");
+        switch (p) {
+            case 1 -> {
+                boolean now = !ctx.isCloudConnected();
+                ctx.setCloudConnected(now);
+                System.out.println("Cloud -> " + (now ? "CONNECTED" : "DISCONNECTED"));
+            }
+            case 2 -> {
+                ctx.toggleLightRemote();
+                System.out.println("Light Remote -> " + (ctx.isLightRemote() ? "ON" : "OFF"));
+            }
+            case 3 -> {
+                ctx.toggleMusicRemote();
+                System.out.println("Music Remote -> " + (ctx.isMusicRemote() ? "ON" : "OFF"));
+            }
+            case 4 -> { ctx.getLightDecorated().operate(); ctx.getMusicDecorated().operate(); }
+            case 0 -> {}
+            default -> System.out.println("Unknown option.");
+        }
+    }
 }

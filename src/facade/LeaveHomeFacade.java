@@ -21,9 +21,9 @@ public class LeaveHomeFacade {
 
     public void run() {
         System.out.println("=== LEAVE HOME ===");
-        light.off();
+        light.off();       // добавили: свет выключаем
         music.stop();
         camera.enable();
-        thermostat.setAway(); // экономичный режим когда никого нет
+        thermostat.setAway(); // экономичный режим
     }
 }

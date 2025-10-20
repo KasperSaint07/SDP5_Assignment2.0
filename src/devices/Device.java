@@ -1,8 +1,5 @@
-    package devices;
+package devices;
 
-
-
-
-    public interface Device {
-        void operate();
-    }
+public interface Device {
+    void operate();
+}
